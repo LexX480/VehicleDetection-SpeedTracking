@@ -1,27 +1,5 @@
 """
 Live webcam vehicle classification + ROUGH speed estimation.
-
-WHAT THIS DOES
-- Uses background subtraction (MOG2) to find moving blobs in a FIXED camera feed
-  — this is a lightweight stand-in for a real object detector, since you don't
-  have the YOLOv8 detection model handy. It works best with a still camera
-  pointed at a relatively static scene (a road), and struggles with a shaky
-  camera, moving trees/shadows, or heavy lighting changes.
-- Tracks each blob across frames with a simple centroid tracker (nearest-neighbour
-  matching frame to frame, no external tracking library needed).
-- Every few frames, crops the blob's bounding box and runs it through your
-  transfer_best.keras classifier to get a vehicle type + confidence.
-- Estimates speed from how fast the blob's centroid moves in pixels, converted
-  to meters using an ASSUMED real-world width for that vehicle class (there's
-  no calibrated distance reference in this setup, so this is the only scale
-  we have). This is a ROUGH, RELATIVE estimate — not for any official/legal use.
-
-Setup: same folder as before (transfer_best.keras, class_names.json), same
-requirements.txt (tensorflow, opencv-python, numpy) — no new dependencies.
-
-Run:
-    python camera_speed.py
-    (press 'q' to quit)
 """
 
 import json
@@ -33,7 +11,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-# ---- Config ----
+#  Config 
 MODEL_PATH = "transfer_best.keras"
 CLASS_NAMES_PATH = "class_names.json"
 IMG_SIZE = 224

@@ -1,14 +1,4 @@
 """
-Simple local website with two independent boxes:
-  1) Bike / vehicle classification  (transfer_best.keras, whole-frame)
-  2) Rough speed tracking           (background subtraction + centroid tracker)
-
-One shared webcam feed powers both — a background thread reads frames once,
-and each box runs its own independent processing pipeline on the latest frame.
-q
-Setup (same folder as transfer_best.keras + class_names.json):
-    pip install flask tensorflow opencv-python numpy
-
 Run:
     python app.py
 Then open:
@@ -26,7 +16,7 @@ import numpy as np
 import tensorflow as tf
 from flask import Flask, Response, render_template
 
-# ---- Config ----
+#  Config 
 MODEL_PATH = "transfer_best.keras"
 CLASS_NAMES_PATH = "class_names.json"
 IMG_SIZE = 224
@@ -62,7 +52,7 @@ def guess_width_m(label):
     return DEFAULT_WIDTH_M
 
 
-# ---- Load class names + model once at startup ----
+#  Load class names + model once at startup 
 def load_class_names(path):
     p = Path(path)
     if not p.is_file():
@@ -82,7 +72,7 @@ if MODEL.output_shape[-1] != len(CLASS_NAMES):
     sys.exit("ERROR: model output classes and class_names.json length don't match.")
 
 
-# ---- Shared camera capture (single physical camera, read once, used by both pipelines) ----
+#  Shared camera capture (single physical camera, read once, used by both pipelines) 
 class SharedCamera:
     def __init__(self, index=CAMERA_INDEX):
         self.cap = cv2.VideoCapture(index)

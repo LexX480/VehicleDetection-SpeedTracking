@@ -1,26 +1,4 @@
-"""
-Live webcam vehicle classification using the trained transfer-learning model
-(transfer_best.keras — EfficientNetB0 backbone, 224x224 input, 11 classes).
- 
-This is a CLASSIFIER, not a detector: it labels the whole frame (or a chosen
-region of it), it does not draw a bounding box around individual vehicles.
-For actual box-drawing detection, use the separate YOLOv8 model instead
-(see the note at the bottom of this file).
- 
-Setup:
-    python -m venv venv
-    source venv/bin/activate        # Windows: venv\\Scripts\\activate
-    pip install tensorflow opencv-python numpy
- 
-Files needed in the same folder as this script:
-    transfer_best.keras
-    class_names.json        <- generate with export_class_names.py in Colab
- 
-Run:
-    python camera_predict.py
-    (press 'q' to quit)
-"""
- 
+
 import json
 import sys
 import time
@@ -30,13 +8,13 @@ import cv2
 import numpy as np
 import tensorflow as tf
  
-# ---- Config ----
+#  Config 
 MODEL_PATH = "transfer_best.keras"
 CLASS_NAMES_PATH = "class_names.json"
-IMG_SIZE = 224          # must match training (Section 2 IMG_SIZE in the notebook)
-CAMERA_INDEX = 0        # 0 = default webcam; try 1, 2... if you have multiple cameras
-CONF_THRESHOLD = 0.5    # below this, label as "Uncertain" instead of trusting the top class
-PREDICT_EVERY_N_FRAMES = 3  # skip frames between predictions to keep the feed smooth on CPU
+IMG_SIZE = 224         
+CAMERA_INDEX = 0        
+CONF_THRESHOLD = 0.5    
+PREDICT_EVERY_N_FRAMES = 3  
  
  
 def load_class_names(path):
