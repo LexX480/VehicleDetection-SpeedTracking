@@ -14,7 +14,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 import tensorflow as tf
-from flask import Flask, Response, render_template
+from flask import Flask, Response, jsonify, render_template, send_from_directory
+
+import licencePlate
 
 #  Config 
 MODEL_PATH = "transfer_best.keras"
@@ -30,6 +32,8 @@ MAX_MATCH_DISTANCE = 120
 SPEED_WINDOW_SECONDS = 0.6
 CROP_MARGIN_FRAC = 0.15
 MERGE_OVERLAP_IOU = 0.15
+
+CAPTURE_DIR = "captures"
 
 ASSUMED_WIDTH_M = {
     "bicycle": 0.6, "cycle": 0.6,
@@ -364,6 +368,33 @@ def video_feed_classify():
 @app.route("/video_feed/speed")
 def video_feed_speed():
     return Response(gen_speed_stream(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
+# =============================================================================
+# BOX 3 — License plate highlighting + capture
+# =============================================================================
+@app.route("/video_feed/plate")
+def video_feed_plate():
+    return Response(licencePlate.gen_plate_stream(CAMERA),
+                     mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.route("/capture_plate", methods=["POST"])
+def capture_plate():
+    result = licencePlate.capture_plate(CAMERA, save_dir=CAPTURE_DIR)
+    if not result["success"]:
+        return jsonify(result), 503
+
+    result["full_image_url"] = f"/captures/{result['full_image']}"
+    result["plate_image_url"] = (
+        f"/captures/{result['plate_image']}" if result["plate_image"] else None
+    )
+    return jsonify(result)
+
+
+@app.route("/captures/<path:filename>")
+def serve_capture(filename):
+    return send_from_directory(CAPTURE_DIR, filename)
 
 
 if __name__ == "__main__":

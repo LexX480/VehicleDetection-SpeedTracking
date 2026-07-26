@@ -221,6 +221,71 @@
         background: #d33;
         color: #fff;
       }
+
+      .btn.capture {
+        border-color: #16a34a;
+        color: #16a34a;
+      }
+
+      .btn.capture:hover {
+        background: #16a34a;
+        color: #fff;
+      }
+
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .row-solo {
+        max-width: 470px;
+        margin: 24px auto 0;
+      }
+
+      .capture-result {
+        display: none;
+        border-top: 1px solid var(--border);
+        padding: 18px 22px 22px;
+      }
+
+      .capture-result.show {
+        display: block;
+      }
+
+      .capture-result .cap-label {
+        font-family: 'Space Grotesk', monospace;
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      .capture-thumbs {
+        display: flex;
+        gap: 12px;
+      }
+
+      .capture-thumbs figure {
+        margin: 0;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .capture-thumbs img {
+        width: 100%;
+        display: block;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        background: #0d0d0d;
+      }
+
+      .capture-thumbs figcaption {
+        margin-top: 6px;
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-align: center;
+      }
     </style>
   </head>
 
@@ -271,12 +336,49 @@
 
     </div>
 
+    <div class="row-solo">
+      <!-- Box 3: License Plate Capture -->
+      <div class="card">
+        <div class="card-head">
+          <div class="title">License Plate Capture</div>
+          <div class="status-pill" id="status-plate"><span class="status-dot"></span><span>Idle</span></div>
+        </div>
+        <div class="media" id="media-plate">
+          <div class="placeholder" onclick="startFeed('plate')">
+            <div class="play-circle">▶</div>
+            <span>Start scanning</span>
+          </div>
+        </div>
+        <div class="card-foot">
+          <div class="caption">highlights plate, then snap a photo</div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn capture" id="btn-capture" onclick="capturePlate()" disabled>Capture</button>
+            <button class="btn start" id="btn-plate" onclick="toggleFeed('plate')">Start</button>
+          </div>
+        </div>
+        <div class="capture-result" id="capture-result">
+          <div class="cap-label" id="capture-status">No capture yet</div>
+          <div class="capture-thumbs">
+            <figure>
+              <img id="capture-full" src="" alt="Captured frame">
+              <figcaption>Full frame</figcaption>
+            </figure>
+            <figure>
+              <img id="capture-crop" src="" alt="Plate close-up" style="display:none;">
+              <figcaption id="capture-crop-caption" style="display:none;">Plate close-up</figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       const FEED_URLS = {
         classify: "{{ url_for('video_feed_classify') }}",
-        speed: "{{ url_for('video_feed_speed') }}"
+        speed: "{{ url_for('video_feed_speed') }}",
+        plate: "{{ url_for('video_feed_plate') }}"
       };
-      const active = { classify: false, speed: false };
+      const active = { classify: false, speed: false, plate: false };
 
       function startFeed(key) {
         if (active[key]) return;
@@ -309,18 +411,22 @@
         status.querySelector('span:last-child').textContent = 'Live';
 
         active[key] = true;
+
+        if (key === 'plate') {
+          document.getElementById('btn-capture').disabled = false;
+        }
       }
 
       function deactivateFeed(key) {
         const media = document.getElementById('media-' + key);
         const btn = document.getElementById('btn-' + key);
         const status = document.getElementById('status-' + key);
-        const label = key === 'classify' ? 'classification' : 'tracking';
+        const labels = { classify: 'classification', speed: 'tracking', plate: 'scanning' };
 
         media.innerHTML = `
       <div class="placeholder" onclick="startFeed('${key}')">
         <div class="play-circle">▶</div>
-        <span>Start ${label}</span>
+        <span>Start ${labels[key]}</span>
       </div>`;
 
         btn.textContent = 'Start';
@@ -331,6 +437,55 @@
         status.querySelector('span:last-child').textContent = 'Idle';
 
         active[key] = false;
+
+        if (key === 'plate') {
+          document.getElementById('btn-capture').disabled = true;
+        }
+      }
+
+      async function capturePlate() {
+        const btn = document.getElementById('btn-capture');
+        const resultBox = document.getElementById('capture-result');
+        const statusLine = document.getElementById('capture-status');
+
+        btn.disabled = true;
+        btn.textContent = 'Capturing...';
+
+        try {
+          const res = await fetch('/capture_plate', { method: 'POST' });
+          const data = await res.json();
+
+          if (!data.success) {
+            statusLine.textContent = data.error || 'Capture failed.';
+            resultBox.classList.add('show');
+            return;
+          }
+
+          const fullImg = document.getElementById('capture-full');
+          const cropImg = document.getElementById('capture-crop');
+          const cropCaption = document.getElementById('capture-crop-caption');
+
+          fullImg.src = data.full_image_url + '?t=' + Date.now();
+
+          if (data.plate_image_url) {
+            cropImg.src = data.plate_image_url + '?t=' + Date.now();
+            cropImg.style.display = 'block';
+            cropCaption.style.display = 'block';
+            statusLine.textContent = `${data.plates_found} plate(s) detected — saved.`;
+          } else {
+            cropImg.style.display = 'none';
+            cropCaption.style.display = 'none';
+            statusLine.textContent = 'No plate detected — full frame saved.';
+          }
+
+          resultBox.classList.add('show');
+        } catch (err) {
+          statusLine.textContent = 'Capture request failed.';
+          resultBox.classList.add('show');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Capture';
+        }
       }
     </script>
 
